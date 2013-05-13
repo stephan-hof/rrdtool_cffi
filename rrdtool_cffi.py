@@ -2,6 +2,7 @@ import math
 import threading
 import functools
 import cffi
+from six.moves import xrange
 
 
 class error(Exception):
@@ -115,23 +116,27 @@ def fetch(*args):
         raise _get_error()
 
     try:
-        row = (stop[0] - start[0]) / step[0]
+        row = (stop[0] - start[0]) // step[0]
         data = []
         index = 0
         for i in xrange(row):
             t = []
-            for j in xrange(ds_count[0]):
+            for j in range(ds_count[0]):
                 dp = fetch_ret[0][index]
                 index += 1
                 t.append(None if math.isnan(dp) else dp)
             data.append(tuple(t))
 
+        ds_names_ret = []
+        for i in range(ds_count[0]):
+            ds_names_ret.append(ffi.string(ds_names[0][i]).decode('ascii'))
+
         return (
             (start[0], stop[0], step[0]),
-            tuple(ffi.string(ds_names[0][i]) for i in xrange(ds_count[0])),
+            tuple(ds_names_ret),
             data)
     finally:
-        for i in xrange(ds_count[0]):
+        for i in range(ds_count[0]):
             librrd.rrd_freemem(ds_names[0][i])
         librrd.rrd_freemem(ds_names[0])
         librrd.rrd_freemem(fetch_ret[0])
@@ -177,7 +182,7 @@ def _prepare_args(cmd_name, args):
         else:
             ret.append(item)
 
-    return [ffi.new('char[]', x) for x in ret]
+    return [ffi.new('char[]', x.encode('ascii')) for x in ret]
 
 
 def _get_error():
@@ -197,14 +202,14 @@ def _convert_info(info_ret):
         elif type_ == librrd.RD_I_CNT:
             val = record.value.u_cnt
         elif type_ == librrd.RD_I_STR:
-            val = ffi.string(record.value.u_str)
+            val = ffi.string(record.value.u_str).decode('ascii')
         elif type_ == librrd.RD_I_INT:
             val = record.value.u_int
         elif type_ == librrd.RD_I_BLO:
             val = ffi.buffer(record.value.u_blo.ptr, record.value.u_blo.size)
             val = val[:]
 
-        ret[ffi.string(record.key)] = val
+        ret[ffi.string(record.key).decode('ascii')] = val
         record = getattr(record, 'next')[0]
 
     return ret

@@ -1,6 +1,7 @@
 import unittest
 import re
 import os
+import six
 from rrdtool_cffi import create
 from rrdtool_cffi import update
 from rrdtool_cffi import fetch
@@ -57,7 +58,7 @@ class TestRRDTool(unittest.TestCase):
 
     def test_update(self):
         create(self.SIMPLE_CREATE_ARGS)
-        for i in xrange(1, 100):
+        for i in range(1, 100):
             update('/tmp/foo', '%i:%i:%i' % (time_ref + i, i, i))
 
     def test_fetch_all_none(self):
@@ -71,7 +72,7 @@ class TestRRDTool(unittest.TestCase):
 
         ref = (
             (1368278970, 1368279180, 10),
-            ('a', 'b'),
+            (six.u('a'), six.u('b')),
             [
                 (None, None), (None, None), (None, None), (None, None),
                 (None, None), (None, None), (None, None), (None, None),
@@ -87,7 +88,7 @@ class TestRRDTool(unittest.TestCase):
     def test_fetch_with_data(self):
         create(self.SIMPLE_CREATE_ARGS)
         update_start = time_ref + 1
-        for ts in xrange(update_start, update_start + 300, 10):
+        for ts in range(update_start, update_start + 300, 10):
             update('/tmp/foo', '%i:100:200' % ts)
 
         ret = fetch(
@@ -99,7 +100,7 @@ class TestRRDTool(unittest.TestCase):
 
         ref = (
             (1368278970, 1368279380, 10),
-            ('a', 'b'),
+            (six.u('a'), six.u('b')),
             [
                 (None, None), (100.0, 200.0), (100.0, 200.0), (100.0, 200.0),
                 (100.0, 200.0), (100.0, 200.0), (100.0, 200.0), (100.0, 200.0),
@@ -125,7 +126,7 @@ class TestRRDTool(unittest.TestCase):
         self.assertEqual(time_ref, last('/tmp/foo'))
 
         update_start = time_ref + 1
-        for ts in xrange(update_start, update_start + 300, 10):
+        for ts in range(update_start, update_start + 300, 10):
             update('/tmp/foo', '%i:100:200' % ts)
 
         self.assertEqual(ts, last('/tmp/foo'))
@@ -135,52 +136,52 @@ class TestRRDTool(unittest.TestCase):
         ret = info('/tmp/foo')
 
         ref = {
-            'filename': '/tmp/foo',
-            'header_size': 1128,
-            'last_update': 1368278979,
-            'step': 10,
-            'rrd_version': '0003',
-            'ds[a].index': 0,
-            'ds[a].value': 0.0,
-            'ds[a].type': 'GAUGE',
-            'ds[a].min': 0.0,
-            'ds[a].max': None,
-            'ds[a].minimal_heartbeat': 120,
-            'ds[a].unknown_sec': 9,
-            'ds[a].last_ds': 'U',
-            'ds[b].index': 1,
-            'ds[b].value': 0.0,
-            'ds[b].type': 'GAUGE',
-            'ds[b].min': 0.0,
-            'ds[b].max': None,
-            'ds[b].minimal_heartbeat': 120,
-            'ds[b].unknown_sec': 9,
-            'ds[b].last_ds': 'U',
-            'rra[0].cf': 'AVERAGE',
-            'rra[0].pdp_per_row': 1,
-            'rra[0].rows': 100,
-            'rra[0].xff': 0.5,
-            'rra[0].cur_row': 61,
-            'rra[0].cdp_prep[1].unknown_datapoints': 0,
-            'rra[0].cdp_prep[1].value': None,
-            'rra[0].cdp_prep[0].unknown_datapoints': 0,
-            'rra[0].cdp_prep[0].value': None,
-            'rra[1].cf': 'AVERAGE',
-            'rra[1].pdp_per_row': 10,
-            'rra[1].rows': 1000,
-            'rra[1].xff': 0.5,
-            'rra[1].cur_row': 177,
-            'rra[1].cdp_prep[1].unknown_datapoints': 7,
-            'rra[1].cdp_prep[1].value': None,
-            'rra[1].cdp_prep[0].unknown_datapoints': 7,
-            'rra[1].cdp_prep[0].value': None,
+            six.u('filename'): '/tmp/foo',
+            six.u('header_size'): 1128,
+            six.u('last_update'): 1368278979,
+            six.u('step'): 10,
+            six.u('rrd_version'): '0003',
+            six.u('ds[a].index'): 0,
+            six.u('ds[a].value'): 0.0,
+            six.u('ds[a].type'): 'GAUGE',
+            six.u('ds[a].min'): 0.0,
+            six.u('ds[a].max'): None,
+            six.u('ds[a].minimal_heartbeat'): 120,
+            six.u('ds[a].unknown_sec'): 9,
+            six.u('ds[a].last_ds'): 'U',
+            six.u('ds[b].index'): 1,
+            six.u('ds[b].value'): 0.0,
+            six.u('ds[b].type'): 'GAUGE',
+            six.u('ds[b].min'): 0.0,
+            six.u('ds[b].max'): None,
+            six.u('ds[b].minimal_heartbeat'): 120,
+            six.u('ds[b].unknown_sec'): 9,
+            six.u('ds[b].last_ds'): 'U',
+            six.u('rra[0].cf'): 'AVERAGE',
+            six.u('rra[0].pdp_per_row'): 1,
+            six.u('rra[0].rows'): 100,
+            six.u('rra[0].xff'): 0.5,
+            six.u('rra[0].cur_row'): 61,
+            six.u('rra[0].cdp_prep[1].unknown_datapoints'): 0,
+            six.u('rra[0].cdp_prep[1].value'): None,
+            six.u('rra[0].cdp_prep[0].unknown_datapoints'): 0,
+            six.u('rra[0].cdp_prep[0].value'): None,
+            six.u('rra[1].cf'): 'AVERAGE',
+            six.u('rra[1].pdp_per_row'): 10,
+            six.u('rra[1].rows'): 1000,
+            six.u('rra[1].xff'): 0.5,
+            six.u('rra[1].cur_row'): 177,
+            six.u('rra[1].cdp_prep[1].unknown_datapoints'): 7,
+            six.u('rra[1].cdp_prep[1].value'): None,
+            six.u('rra[1].cdp_prep[0].unknown_datapoints'): 7,
+            six.u('rra[1].cdp_prep[0].value'): None,
         }
 
         # seems like 'current row is not so stable'
-        del ref['rra[0].cur_row']
-        del ref['rra[1].cur_row']
-        del ret['rra[0].cur_row']
-        del ret['rra[1].cur_row']
+        del ref[six.u('rra[0].cur_row')]
+        del ref[six.u('rra[1].cur_row')]
+        del ret[six.u('rra[0].cur_row')]
+        del ret[six.u('rra[1].cur_row')]
         self.assertEqual(ref, ret)
 
 

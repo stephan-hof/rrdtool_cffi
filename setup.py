@@ -10,5 +10,5 @@ setup(
     author_email="Use the github issues",
     url="https://github.com/stephan-hof/rrdtool_cffi",
     py_modules=['rrdtool_cffi'],
-    install_requires=['cffi']
+    install_requires=['cffi', 'six']
 )
