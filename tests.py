@@ -177,11 +177,13 @@ class TestRRDTool(unittest.TestCase):
             six.u('rra[1].cdp_prep[0].value'): None,
         }
 
-        # seems like 'current row is not so stable'
+        # Delete the 'unstable keys'
         del ref[six.u('rra[0].cur_row')]
         del ref[six.u('rra[1].cur_row')]
+        del ref[six.u('header_size')]
         del ret[six.u('rra[0].cur_row')]
         del ret[six.u('rra[1].cur_row')]
+        del ret[six.u('header_size')]
         self.assertEqual(ref, ret)
 
 
