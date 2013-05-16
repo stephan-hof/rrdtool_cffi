@@ -2,6 +2,7 @@ import math
 import threading
 import functools
 import cffi
+import time
 from six.moves import xrange
 
 
@@ -116,25 +117,14 @@ def fetch(*args):
         raise _get_error()
 
     try:
-        row = (stop[0] - start[0]) // step[0]
-        data = []
-        index = 0
-        for i in xrange(row):
-            t = []
-            for j in range(ds_count[0]):
-                dp = fetch_ret[0][index]
-                index += 1
-                t.append(None if math.isnan(dp) else dp)
-            data.append(tuple(t))
-
-        ds_names_ret = []
-        for i in range(ds_count[0]):
-            ds_names_ret.append(ffi.string(ds_names[0][i]).decode('ascii'))
-
-        return (
-            (start[0], stop[0], step[0]),
-            tuple(ds_names_ret),
-            data)
+        return _convert_fetch_result(
+            ffi,
+            stop,
+            start,
+            step,
+            fetch_ret,
+            ds_count,
+            ds_names)
     finally:
         for i in range(ds_count[0]):
             librrd.rrd_freemem(ds_names[0][i])
@@ -213,3 +203,160 @@ def _convert_info(info_ret):
         record = getattr(record, 'next')[0]
 
     return ret
+
+def _convert_fetch_result(ffi, stop, start, step, fetch_ret, ds_count, ds_names):
+   row = (stop[0] - start[0]) // step[0]
+   data = []
+   index = 0
+   for i in xrange(row):
+       t = []
+       for j in range(ds_count[0]):
+           dp = fetch_ret[0][index]
+           index += 1
+           t.append(None if math.isnan(dp) else dp)
+       data.append(tuple(t))
+
+   ds_names_ret = []
+   for i in range(ds_count[0]):
+       ds_names_ret.append(ffi.string(ds_names[0][i]).decode('ascii'))
+
+   return (
+       (start[0], stop[0], step[0]),
+       tuple(ds_names_ret),
+       data)
+
+
+
+# Here are the thread safe methods
+th_ffi = cffi.FFI()
+th_ffi.cdef("""
+    typedef double rrd_value_t;
+
+    int rrd_create_r(
+            const char *,
+            unsigned long,
+            long int,
+            int,
+            const char **);
+
+    int rrd_update_r(
+        const char *filename,
+        const char *_template,
+        int argc,
+        const char **argv);
+
+    int rrd_fetch_r(
+        /* name of the rrd */
+        const char *filename,
+
+        /* which consolidation function ? */
+        const char *cf,
+
+        /* which time frame do you want ?
+         * will be changed to represent reality
+         */
+        long int *start,
+        long int *end,
+
+        /* which stepsize do you want ?
+         * will be changed to represent reality
+         */
+        unsigned long *step,
+
+        /* number of data sources in file */
+        unsigned long *ds_cnt,
+
+        /* names of data_sources */
+        char ***ds_namv,
+
+        rrd_value_t **data);
+
+    void rrd_freemem(void*);
+    char* rrd_get_error(void);
+    void rrd_clear_error(void);
+    """
+)
+
+librrd_th = th_ffi.dlopen('rrd_th')
+
+def create_r(filename, step, start=None, dss=[], rras=[]):
+    if start is None:
+        start = int(time.time())
+
+    args = [th_ffi.new('char[]', x.encode('ascii')) for x in dss]
+    args.extend([th_ffi.new('char[]', x.encode('ascii')) for x in rras])
+
+    ret = librrd_th.rrd_create_r(
+        th_ffi.new('char[]', filename),
+        step,
+        start,
+        len(args),
+        args)
+
+    if ret == -1:
+        raise _get_error_th()
+
+def update_r(filename, updates, template=''):
+    if not template:
+        template = th_ffi.NULL
+    else:
+        template = th_ffi.new('char[]', template.encode('ascii'))
+
+    args = [th_ffi.new('char[]', x.encode('ascii')) for x in updates]
+
+    ret = librrd_th.rrd_update_r(
+        th_ffi.new('char[]', filename),
+        template,
+        len(args),
+        args)
+
+    if ret == -1:
+        raise _get_error_th()
+
+def fetch_r(filename, cf, py_start, py_stop, py_step=1):
+    start = th_ffi.new('long int*')
+    start[0] = py_start
+
+    stop = th_ffi.new('long int*')
+    stop[0] = py_stop
+
+    step = th_ffi.new('unsigned long*')
+    step[0] = py_step
+
+    ds_count = th_ffi.new('unsigned long*')
+    ds_names = th_ffi.new('char ***')
+    fetch_ret = ffi.new('double **')
+
+    ret = librrd_th.rrd_fetch_r(
+        th_ffi.new('char[]', filename),
+        th_ffi.new('char[]', cf),
+        start,
+        stop,
+        step,
+        ds_count,
+        ds_names,
+        fetch_ret)
+
+    if ret == -1:
+        raise _get_error_th()
+
+    try:
+        return _convert_fetch_result(
+            th_ffi,
+            stop,
+            start,
+            step,
+            fetch_ret,
+            ds_count,
+            ds_names)
+    finally:
+        for i in range(ds_count[0]):
+            librrd_th.rrd_freemem(ds_names[0][i])
+        librrd_th.rrd_freemem(ds_names[0])
+        librrd_th.rrd_freemem(fetch_ret[0])
+
+
+def _get_error_th():
+    msg = th_ffi.string(librrd_th.rrd_get_error())
+    librrd_th.rrd_clear_error()
+    return error(msg)

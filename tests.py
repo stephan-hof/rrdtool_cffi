@@ -9,6 +9,9 @@ from rrdtool_cffi import error
 from rrdtool_cffi import first
 from rrdtool_cffi import last
 from rrdtool_cffi import info
+from rrdtool_cffi import create_r
+from rrdtool_cffi import update_r
+from rrdtool_cffi import fetch_r
 
 time_ref = 1368278979
 
@@ -117,6 +120,72 @@ class TestRRDTool(unittest.TestCase):
         )
         self.assertEqual(ref, ret)
 
+    def test_fetch_r_all_none(self):
+        create(self.SIMPLE_CREATE_ARGS)
+        update_start = time_ref + 1
+        for ts in range(update_start, update_start + 300, 10):
+            update('/tmp/foo', '%i:100:200' % ts)
+
+        ret = fetch_r(
+            '/tmp/foo',
+            'AVERAGE',
+            time_ref,
+            time_ref + 400
+        )
+
+        ref = (
+            (1368278970, 1368279380, 10),
+            (six.u('a'), six.u('b')),
+            [
+                (None, None), (100.0, 200.0), (100.0, 200.0), (100.0, 200.0),
+                (100.0, 200.0), (100.0, 200.0), (100.0, 200.0), (100.0, 200.0),
+                (100.0, 200.0), (100.0, 200.0), (100.0, 200.0), (100.0, 200.0),
+                (100.0, 200.0), (100.0, 200.0), (100.0, 200.0), (100.0, 200.0),
+                (100.0, 200.0), (100.0, 200.0), (100.0, 200.0), (100.0, 200.0),
+                (100.0, 200.0), (100.0, 200.0), (100.0, 200.0), (100.0, 200.0),
+                (100.0, 200.0), (100.0, 200.0), (100.0, 200.0), (100.0, 200.0),
+                (100.0, 200.0), (100.0, 200.0), (None, None), (None, None),
+                (None, None), (None, None), (None, None), (None, None),
+                (None, None), (None, None), (None, None), (None, None),
+                (None, None)
+            ]
+        )
+        self.assertEqual(ref, ret)
+
+    def test_fetch_r_with_data(self):
+        create(self.SIMPLE_CREATE_ARGS)
+        update_start = time_ref + 1
+        for ts in range(update_start, update_start + 300, 10):
+            update('/tmp/foo', '%i:100:200' % ts)
+
+        ret = fetch_r(
+            '/tmp/foo',
+            'AVERAGE',
+            time_ref,
+            time_ref + 400
+        )
+
+        ref = (
+            (1368278970, 1368279380, 10),
+            (six.u('a'), six.u('b')),
+            [
+                (None, None), (100.0, 200.0), (100.0, 200.0), (100.0, 200.0),
+                (100.0, 200.0), (100.0, 200.0), (100.0, 200.0), (100.0, 200.0),
+                (100.0, 200.0), (100.0, 200.0), (100.0, 200.0), (100.0, 200.0),
+                (100.0, 200.0), (100.0, 200.0), (100.0, 200.0), (100.0, 200.0),
+                (100.0, 200.0), (100.0, 200.0), (100.0, 200.0), (100.0, 200.0),
+                (100.0, 200.0), (100.0, 200.0), (100.0, 200.0), (100.0, 200.0),
+                (100.0, 200.0), (100.0, 200.0), (100.0, 200.0), (100.0, 200.0),
+                (100.0, 200.0), (100.0, 200.0), (None, None), (None, None),
+                (None, None), (None, None), (None, None), (None, None),
+                (None, None), (None, None), (None, None), (None, None),
+                (None, None)
+            ]
+        )
+        self.assertEqual(ref, ret)
+
+
+
     def test_first(self):
         create(self.SIMPLE_CREATE_ARGS)
         self.assertEqual(1368277980, first('/tmp/foo'))
@@ -185,6 +254,37 @@ class TestRRDTool(unittest.TestCase):
         del ret[six.u('rra[1].cur_row')]
         del ret[six.u('header_size')]
         self.assertEqual(ref, ret)
+
+
+    def test_create_r(self):
+        dss = [
+            'DS:a:GAUGE:120:0:U',
+            'DS:b:GAUGE:120:0:U'
+        ]
+
+        rras = [
+            'RRA:AVERAGE:0.5:1:100',
+            'RRA:AVERAGE:0.5:10:1000'
+        ]
+
+        create_r('/tmp/foo', 10, time_ref, dss, rras)
+        self.assertTrue(os.path.isfile('/tmp/foo'))
+
+    def test_create_r_with_error(self):
+        dss = [
+            'DS:a:WRONG:120:0:U',
+        ]
+
+        with self.assertRaisesRegexp(error, 'invalid DS type specified'):
+            create_r('/tmp/foo', 10, time_ref, dss)
+
+    def test_update_r(self):
+        create(*self.SIMPLE_CREATE_ARGS)
+
+        for i in range(1, 100):
+            update_r('/tmp/foo', ['%i:%i:%i' % (time_ref + i, i, i)])
+
+        self.assertEqual(time_ref + 99, last('/tmp/foo'))
 
 
 class AssertRaisesContext(object):
