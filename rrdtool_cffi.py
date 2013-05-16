@@ -225,6 +225,9 @@ def _convert_fetch_result(ffi, stop, start, step, fetch_ret, ds_count, ds_names)
        tuple(ds_names_ret),
        data)
 
+def _to_char(ffi, py_string):
+    return ffi.new('char[]', py_string.encode('ascii'))
+
 
 
 # Here are the thread safe methods
@@ -283,11 +286,11 @@ def create_r(filename, step, start=None, dss=[], rras=[]):
     if start is None:
         start = int(time.time())
 
-    args = [th_ffi.new('char[]', x.encode('ascii')) for x in dss]
-    args.extend([th_ffi.new('char[]', x.encode('ascii')) for x in rras])
+    args = [_to_char(th_ffi, x) for x in dss]
+    args.extend([_to_char(th_ffi, x) for x in rras])
 
     ret = librrd_th.rrd_create_r(
-        th_ffi.new('char[]', filename),
+        _to_char(th_ffi, filename),
         step,
         start,
         len(args),
@@ -300,12 +303,12 @@ def update_r(filename, updates, template=''):
     if not template:
         template = th_ffi.NULL
     else:
-        template = th_ffi.new('char[]', template.encode('ascii'))
+        template = _to_char(th_ffi, template)
 
-    args = [th_ffi.new('char[]', x.encode('ascii')) for x in updates]
+    args = [_to_char(th_ffi, x) for x in updates]
 
     ret = librrd_th.rrd_update_r(
-        th_ffi.new('char[]', filename),
+        _to_char(th_ffi, filename),
         template,
         len(args),
         args)
@@ -328,8 +331,8 @@ def fetch_r(filename, cf, py_start, py_stop, py_step=1):
     fetch_ret = ffi.new('double **')
 
     ret = librrd_th.rrd_fetch_r(
-        th_ffi.new('char[]', filename),
-        th_ffi.new('char[]', cf),
+        _to_char(th_ffi, filename),
+        _to_char(th_ffi, cf),
         start,
         stop,
         step,
