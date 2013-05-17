@@ -1,5 +1,7 @@
 from setuptools import setup
 
+with open('README.md') as fd:
+    long_description = fd.read()
 
 setup(
     name="rrdtool_cffi",
@@ -10,5 +12,6 @@ setup(
     author_email="Use the github issues",
     url="https://github.com/stephan-hof/rrdtool_cffi",
     py_modules=['rrdtool_cffi'],
-    install_requires=['cffi', 'six']
+    install_requires=['cffi', 'six'],
+    long_description=long_description,
 )
